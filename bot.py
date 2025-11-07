@@ -24,6 +24,27 @@ intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 
+async def send_ai_response(channel, content):
+    """Helper function to send AI response, handling long messages."""
+    try:
+        response = model.generate_content(content)
+        
+        if response.text:
+            # Discord has a 2000 character limit
+            if len(response.text) > 2000:
+                # Split long messages
+                chunks = [response.text[i:i+2000] for i in range(0, len(response.text), 2000)]
+                for chunk in chunks:
+                    await channel.send(chunk)
+            else:
+                await channel.send(response.text)
+        else:
+            await channel.send("I couldn't generate a response. Please try again.")
+    except Exception as e:
+        print(f"Error generating response: {e}")
+        await channel.send("Sorry, I encountered an error while processing your request.")
+
+
 @bot.event
 async def on_ready():
     """Event handler for when the bot is ready."""
@@ -49,25 +70,7 @@ async def on_message(message):
         
         # Show typing indicator
         async with message.channel.typing():
-            try:
-                # Generate response using GenAI
-                response = model.generate_content(content)
-                
-                # Send the response
-                if response.text:
-                    # Discord has a 2000 character limit
-                    if len(response.text) > 2000:
-                        # Split long messages
-                        chunks = [response.text[i:i+2000] for i in range(0, len(response.text), 2000)]
-                        for chunk in chunks:
-                            await message.channel.send(chunk)
-                    else:
-                        await message.channel.send(response.text)
-                else:
-                    await message.channel.send("I couldn't generate a response. Please try again.")
-            except Exception as e:
-                print(f"Error generating response: {e}")
-                await message.channel.send("Sorry, I encountered an error while processing your request.")
+            await send_ai_response(message.channel, content)
     
     # Process commands
     await bot.process_commands(message)
@@ -77,21 +80,7 @@ async def on_message(message):
 async def ask(ctx, *, question):
     """Command to ask the AI a question."""
     async with ctx.typing():
-        try:
-            response = model.generate_content(question)
-            
-            if response.text:
-                if len(response.text) > 2000:
-                    chunks = [response.text[i:i+2000] for i in range(0, len(response.text), 2000)]
-                    for chunk in chunks:
-                        await ctx.send(chunk)
-                else:
-                    await ctx.send(response.text)
-            else:
-                await ctx.send("I couldn't generate a response. Please try again.")
-        except Exception as e:
-            print(f"Error generating response: {e}")
-            await ctx.send("Sorry, I encountered an error while processing your request.")
+        await send_ai_response(ctx, question)
 
 
 @bot.command(name='help_nova')
