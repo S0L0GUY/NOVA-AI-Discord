@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 import ai
-
+import config
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -28,6 +28,52 @@ async def send_ai_response(channel, content: str):
         )
 
 
+async def collect_channel_history(channel, before_message=None, limit=None) -> str:
+    """Collect prior messages from `channel` into a short conversation
+    history suitable for prepending to the user's prompt.
+
+    - Uses `clean_content` to avoid active pings.
+    - Labels messages as `User:` or `Assistant:` so the model can follow roles.
+    - Respects `config.MAX_HISTORY_MESSAGES` and `config.HISTORY_MAX_CHARS`.
+    """
+    if limit is None:
+        limit = config.MAX_HISTORY_MESSAGES
+
+    messages = []
+    # Fetch messages oldest-first so the conversation reads naturally
+    async for m in channel.history(limit=limit, before=before_message, oldest_first=True):
+        # Skip non-standard message types (like pins or system messages)
+        if m.type != discord.MessageType.default:
+            continue
+        messages.append(m)
+
+    lines = []
+    total_chars = 0
+    for m in messages:
+        content = (m.clean_content or '').strip()
+        if config.INCLUDE_ATTACHMENTS and m.attachments:
+            for a in m.attachments:
+                content += f" [attachment: {a.url}]"
+
+        if not content:
+            continue
+
+        if m.author == bot.user or m.author.bot:
+            line = f"Assistant: {content}"
+        else:
+            line = f"User: {content}"
+
+        lines.append(line)
+        total_chars += len(line) + 1
+
+    # Trim oldest lines until within HISTORY_MAX_CHARS
+    while lines and total_chars > config.HISTORY_MAX_CHARS:
+        removed = lines.pop(0)
+        total_chars -= (len(removed) + 1)
+
+    return "\n".join(lines)
+
+
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
@@ -51,9 +97,15 @@ async def on_message(message):
             )
             return
 
-        # Show typing indicator
+        # Build recent channel history and show typing indicator
+        history = await collect_channel_history(message.channel, before_message=message)
+        if history:
+            combined = f"{history}\nUser: {content}"
+        else:
+            combined = f"User: {content}"
+
         async with message.channel.typing():
-            await send_ai_response(message.channel, content)
+            await send_ai_response(message.channel, combined)
 
     # Process commands
     await bot.process_commands(message)
@@ -62,8 +114,15 @@ async def on_message(message):
 @bot.command(name='ask')
 async def ask(ctx, *, question):
     """Command to ask the AI a question."""
+    # Include recent history when answering commands as well
+    history = await collect_channel_history(ctx.channel, before_message=ctx.message)
+    if history:
+        combined = f"{history}\nUser: {question}"
+    else:
+        combined = f"User: {question}"
+
     async with ctx.typing():
-        await send_ai_response(ctx, question)
+        await send_ai_response(ctx, combined)
 
 
 @bot.command(name='help_nova')
