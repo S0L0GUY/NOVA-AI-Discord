@@ -8,11 +8,8 @@ import sys
 import config
 from discord_bot import bot
 
-from keep_alive import keep_alive
-
 
 if __name__ == '__main__':
-    keep_alive()
     token = config.DISCORD_TOKEN
     if not token:
         print("Error: DISCORD_TOKEN not found in environment variables!")
