@@ -8,3 +8,5 @@ google-generativeai>=0.3.0
 
 # Environment variable management
 python-dotenv>=1.0.0
+
+flask
