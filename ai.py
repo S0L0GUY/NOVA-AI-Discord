@@ -3,6 +3,7 @@
 This module initializes the Google Generative AI client and exposes
 a simple generate_response() function returning plain text.
 """
+
 import google.generativeai as genai
 
 import config
@@ -22,7 +23,7 @@ def _init_model():
     global _model
     if _model is None:
         _configure_genai()
-        _model = genai.GenerativeModel('gemini-2.5-flash')
+        _model = genai.GenerativeModel("gemini-2.5-flash")
     return _model
 
 
@@ -35,7 +36,7 @@ def generate_response(user_content: str) -> str:
     model = _init_model()
     full_prompt = f"System: {config.SYSTEM_PROMPT}\n\nUser: {user_content}"
     resp = model.generate_content(full_prompt)
-    text = getattr(resp, 'text', None)
+    text = getattr(resp, "text", None)
     if not text:
         raise RuntimeError("No response text generated")
     return text

@@ -6,7 +6,7 @@ import config
 
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 
 async def send_ai_response(channel, content: str):
@@ -18,7 +18,7 @@ async def send_ai_response(channel, content: str):
         response_text = ai.generate_response(content)
         if len(response_text) > 2000:
             for i in range(0, len(response_text), 2000):
-                await channel.send(response_text[i:i+2000])
+                await channel.send(response_text[i : i + 2000])
         else:
             await channel.send(response_text)
     except Exception as e:
@@ -41,7 +41,9 @@ async def collect_channel_history(channel, before_message=None, limit=None) -> s
 
     messages = []
     # Fetch messages oldest-first so the conversation reads naturally
-    async for m in channel.history(limit=limit, before=before_message, oldest_first=True):
+    async for m in channel.history(
+        limit=limit, before=before_message, oldest_first=True
+    ):
         # Skip non-standard message types (like pins or system messages)
         if m.type != discord.MessageType.default:
             continue
@@ -50,7 +52,7 @@ async def collect_channel_history(channel, before_message=None, limit=None) -> s
     lines = []
     total_chars = 0
     for m in messages:
-        content = (m.clean_content or '').strip()
+        content = (m.clean_content or "").strip()
         if config.INCLUDE_ATTACHMENTS and m.attachments:
             for a in m.attachments:
                 content += f" [attachment: {a.url}]"
@@ -69,15 +71,15 @@ async def collect_channel_history(channel, before_message=None, limit=None) -> s
     # Trim oldest lines until within HISTORY_MAX_CHARS
     while lines and total_chars > config.HISTORY_MAX_CHARS:
         removed = lines.pop(0)
-        total_chars -= (len(removed) + 1)
+        total_chars -= len(removed) + 1
 
     return "\n".join(lines)
 
 
 @bot.event
 async def on_ready():
-    print(f'{bot.user} has connected to Discord!')
-    print(f'Connected to {len(bot.guilds)} guild(s)')
+    print(f"{bot.user} has connected to Discord!")
+    print(f"Connected to {len(bot.guilds)} guild(s)")
 
 
 @bot.event
@@ -89,7 +91,7 @@ async def on_message(message):
     # Only respond to messages that mention the bot
     if bot.user and bot.user.mentioned_in(message):
         # Remove the bot mention from the message
-        content = message.content.replace(f'<@{bot.user.id}>', '').strip()
+        content = message.content.replace(f"<@{bot.user.id}>", "").strip()
 
         if not content:
             await message.channel.send(
@@ -111,7 +113,7 @@ async def on_message(message):
     await bot.process_commands(message)
 
 
-@bot.command(name='ask')
+@bot.command(name="ask")
 async def ask(ctx, *, question):
     """Command to ask the AI a question."""
     # Include recent history when answering commands as well
@@ -125,7 +127,7 @@ async def ask(ctx, *, question):
         await send_ai_response(ctx, combined)
 
 
-@bot.command(name='help_nova')
+@bot.command(name="help_nova")
 async def help_nova(ctx):
     """Display help information."""
     help_text = (
