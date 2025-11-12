@@ -3,10 +3,8 @@
 # Discord library
 discord.py>=2.3.2
 
-# Google Generative AI
-google-generativeai>=0.3.0
+# HTTP requests (lightweight alternative to the Google SDK)
+requests>=2.31.0
 
 # Environment variable management
 python-dotenv>=1.0.0
-
-flask
