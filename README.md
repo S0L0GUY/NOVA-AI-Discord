@@ -151,3 +151,25 @@ See the [LICENSE](LICENSE) file for details.
 
 ## Support
 If you encounter any issues, please open an issue on the [GitHub repository](https://github.com/S0L0GUY/NOVA-AI-Discord/issues).
+
+## Docker
+
+- **Build**: Create the image from the project directory.
+
+```powershell
+docker build -t nova-ai-discord .
+```
+
+- **Run**: Provide secrets at runtime. Using an env file is simplest:
+
+```powershell
+docker run -d --name nova_bot --env-file .env nova-ai-discord
+```
+
+- **Or** pass env vars directly:
+
+```powershell
+docker run -d --name nova_bot -e DISCORD_TOKEN="<token>" -e GENAI_API_KEY="<key>" nova-ai-discord
+```
+
+- **Notes**: The image does not include your `.env` file by design. Do not commit secrets to source control. The container entrypoint runs `python bot.py` which reads `DISCORD_TOKEN` and `GENAI_API_KEY` from environment variables.
