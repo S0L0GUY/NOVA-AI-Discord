@@ -8,12 +8,3 @@ requests>=2.31.0
 
 # Environment variable management
 python-dotenv>=1.0.0
-
-# Optional: Google Generative AI Python SDK
-# If you want to call Google's Generative AI SDK instead of using an
-# injected client or direct REST calls, install the official package.
-# Example (install only when needed):
-#   pip install google-generative-ai
-
-# Optional: development / typing helpers
-# typing-extensions>=4.5.0
