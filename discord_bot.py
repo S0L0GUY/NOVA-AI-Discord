@@ -33,6 +33,7 @@ async def collect_channel_history(channel, before_message=None, limit=None) -> s
     history suitable for prepending to the user's prompt.
 
     - Uses `clean_content` to avoid active pings.
+    - Includes timestamp and username for each message.
     - Labels messages as `User:` or `Assistant:` so the model can follow roles.
     - Respects `config.MAX_HISTORY_MESSAGES` and `config.HISTORY_MAX_CHARS`.
     """
@@ -60,10 +61,16 @@ async def collect_channel_history(channel, before_message=None, limit=None) -> s
         if not content:
             continue
 
-        if m.author == bot.user or m.author.bot:
-            line = f"Assistant: {content}"
-        else:
-            line = f"User: {content}"
+        # Format timestamp (UTC) and username
+        try:
+            timestamp = m.created_at.strftime("%Y-%m-%d %H:%M:%S UTC")
+        except Exception:
+            timestamp = str(m.created_at)
+
+        username = getattr(m.author, "display_name", None) or getattr(m.author, "name", "Unknown")
+
+        role = "Assistant" if (m.author == bot.user or m.author.bot) else "User"
+        line = f"{timestamp} - {username} ({role}): {content}"
 
         lines.append(line)
         total_chars += len(line) + 1
