@@ -3,29 +3,81 @@ from discord.ext import commands
 
 import ai
 import config
+import re
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
-async def send_ai_response(channel, content: str):
-    """Fetch a response from the AI and send it to the channel.
+async def send_ai_response(target, content: str, reply_to=None):
+    """Fetch a response from the AI and send it.
 
-    Handles long messages by splitting into 2000-character chunks.
+    - `target` may be a `discord.TextChannel` or a `commands.Context`.
+    - If `reply_to` (a `discord.Message`) is provided, the bot will reply
+      to that message (keeping the response linked to the original question).
+    - Long messages are split into 2000-character chunks.
+    - If the AI output contains the literal token `@user` (or a few common
+      placeholders), it will be replaced with the mention for `reply_to.author`.
     """
     try:
         response_text = ai.generate_response(content)
+
+        # If replying to a message, allow the model to include a placeholder
+        # like '@user' which we'll replace with the proper mention syntax.
+        if reply_to:
+            mention = f"<@{reply_to.author.id}>"
+            for token in ("@user", "<@user>", "{user}", "{mention}", "@mention"):
+                response_text = response_text.replace(token, mention)
+
+            # Also resolve simple @Name patterns to real member mentions
+            # by searching the guild members (display_name or username).
+            if reply_to.guild:
+
+                def _resolve(m):
+                    name = m.group(1)
+                    if name.lower() in ("everyone", "here"):
+                        return m.group(0)
+                    for member in reply_to.guild.members:
+                        if (
+                            member.display_name.lower() == name.lower()
+                            or member.name.lower() == name.lower()
+                        ):
+                            return f"<@{member.id}>"
+                    return m.group(0)
+
+                response_text = re.sub(
+                    r"@([A-Za-z0-9_\-]{2,32})", _resolve, response_text
+                )
+
+        async def _send(chunk: str):
+            # If we have a message to reply to, reply so the response is threaded
+            # to the original question. Otherwise send to the provided target.
+            if reply_to:
+                await reply_to.reply(chunk)
+            else:
+                if isinstance(target, commands.Context):
+                    await target.send(chunk)
+                else:
+                    await target.send(chunk)
+
         if len(response_text) > 2000:
             for i in range(0, len(response_text), 2000):
-                await channel.send(response_text[i : i + 2000])
+                await _send(response_text[i : i + 2000])
         else:
-            await channel.send(response_text)
+            await _send(response_text)
     except Exception as e:
         print(f"Error generating response: {e}")
-        await channel.send(
-            "Sorry, I encountered an error while processing your request."
-        )
+        # Try to reply if possible, otherwise send to target
+        err_msg = "Sorry, I encountered an error while processing your request."
+        if reply_to:
+            await reply_to.reply(err_msg)
+        else:
+            if isinstance(target, commands.Context):
+                await target.send(err_msg)
+            else:
+                await target.send(err_msg)
 
 
 async def collect_channel_history(channel, before_message=None, limit=None) -> str:
@@ -89,8 +141,12 @@ async def on_message(message):
 
     # Only respond to messages that mention the bot
     if bot.user and bot.user.mentioned_in(message):
-        # Remove the bot mention from the message
-        content = message.content.replace(f"<@{bot.user.id}>", "").strip()
+        # Remove the bot mention from the message (handle both <@id> and <@!id>)
+        content = (
+            message.content.replace(f"<@{bot.user.id}>", "")
+            .replace(f"<@!{bot.user.id}>", "")
+            .strip()
+        )
 
         if not content:
             await message.channel.send(
@@ -106,24 +162,10 @@ async def on_message(message):
             combined = f"User: {content}"
 
         async with message.channel.typing():
-            await send_ai_response(message.channel, combined)
+            await send_ai_response(message.channel, combined, reply_to=message)
 
     # Process commands
     await bot.process_commands(message)
-
-
-@bot.command(name="ask")
-async def ask(ctx, *, question):
-    """Command to ask the AI a question."""
-    # Include recent history when answering commands as well
-    history = await collect_channel_history(ctx.channel, before_message=ctx.message)
-    if history:
-        combined = f"{history}\nUser: {question}"
-    else:
-        combined = f"User: {question}"
-
-    async with ctx.typing():
-        await send_ai_response(ctx, combined)
 
 
 @bot.command(name="help_nova")
@@ -134,9 +176,46 @@ async def help_nova(ctx):
         "**Ways to interact with me:**\n"
         "1. Mention me (@NOVA-AI) followed by your question\n"
         "2. Use the `!ask` command followed by your question\n\n"
+        "**How NOVA mentions people in replies:**\n"
+        "- Include the token `@user` in your question and NOVA will replace\n"
+        "  it with the person who asked the question.\n"
+        "- If NOVA outputs something like `@Alice`, she will try to resolve\n"
+        "  `Alice` to a server member and convert it to a proper mention\n"
+        "  (e.g. `<@1234567890>`). Use full usernames or display names when\n"
+        "  possible to improve matching.\n\n"
         "**Examples:**\n"
-        "- @NOVA-AI What is artificial intelligence?\n"
-        "- !ask Tell me a joke\n\n"
-        "**Note:** I'm powered by Google's Gemini AI!\n"
+        "- @NOVA-AI @user tell me a joke\n"
+        "- !ask @Bob what's your favorite color\n\n"
+        "**Note:** You can DM NOVA directly or mention her in server channels.\n"
+        "She will look up server members when resolving names for mentions.\n"
     )
     await ctx.send(help_text)
+
+
+@bot.command(name="members")
+async def members(ctx):
+    """List server members with mention syntax so NOVA can mention them.
+
+    - Excludes bot accounts.
+    - Works only in a guild (not in DMs).
+    """
+    if ctx.guild is None:
+        await ctx.send("This command works only in servers (not in DMs).")
+        return
+
+    # Exclude bots so the list focuses on real users
+    user_members = [m for m in ctx.guild.members]
+    if not user_members:
+        await ctx.send("No (non-bot) members found in this server.")
+        return
+
+    # Sort by display name for a stable order
+    user_members.sort(key=lambda m: m.display_name.lower())
+
+    lines = [f"<@{m.id}> — {m.display_name}" for m in user_members]
+    header = f"Server members ({len(lines)}):\n"
+    text = header + "\n".join(lines)
+
+    # Split into Discord-friendly chunks
+    for i in range(0, len(text), 2000):
+        await ctx.send(text[i : i + 2000])

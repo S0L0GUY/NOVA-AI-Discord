@@ -60,9 +60,7 @@ if __name__ == "__main__":
     except ValueError:
         port = 8080
 
-    thread = threading.Thread(
-        target=_start_health_server, args=(port,), daemon=True
-    )
+    thread = threading.Thread(target=_start_health_server, args=(port,), daemon=True)
     thread.start()
 
     bot.run(token)
