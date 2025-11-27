@@ -1,9 +1,10 @@
+import re
+
 import discord
 from discord.ext import commands
 
 import ai
 import config
-import re
 
 intents = discord.Intents.default()
 intents.message_content = True

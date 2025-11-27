@@ -6,10 +6,10 @@ health-checks, then starts the Discord bot defined in
 `discord_bot.py`.
 """
 
-import sys
 import os
+import sys
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import config
 from discord_bot import bot
