@@ -12,18 +12,19 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
-async def send_ai_response(target, content: str, reply_to=None):
+async def send_ai_response(target, content: str, reply_to=None, image_urls=None):
     """Fetch a response from the AI and send it.
 
     - `target` may be a `discord.TextChannel` or a `commands.Context`.
     - If `reply_to` (a `discord.Message`) is provided, the bot will reply
       to that message (keeping the response linked to the original question).
+    - `image_urls` is an optional list of image URLs to include in the request.
     - Long messages are split into 2000-character chunks.
     - If the AI output contains the literal token `@user` (or a few common
       placeholders), it will be replaced with the mention for `reply_to.author`.
     """
     try:
-        response_text = ai.generate_response(content)
+        response_text = ai.generate_response(content, image_urls=image_urls)
 
         # If replying to a message, allow the model to include a placeholder
         # like '@user' which we'll replace with the proper mention syntax.
@@ -148,11 +149,22 @@ async def on_message(message):
             .strip()
         )
 
-        if not content:
+        if not content and not message.attachments:
             await message.channel.send(
                 "Hi! Mention me with a question and I'll help you!"
             )
             return
+
+        # Extract image URLs from attachments
+        image_urls = []
+        if message.attachments:
+            for attachment in message.attachments:
+                # Check if attachment is an image
+                if attachment.content_type and attachment.content_type.startswith('image/'):
+                    image_urls.append(attachment.url)
+                    # Add attachment info to content if no text was provided
+                    if not content:
+                        content = "Analyze this image"
 
         # Build recent channel history and show typing indicator
         history = await collect_channel_history(message.channel, before_message=message)
@@ -162,7 +174,7 @@ async def on_message(message):
             combined = f"User: {content}"
 
         async with message.channel.typing():
-            await send_ai_response(message.channel, combined, reply_to=message)
+            await send_ai_response(message.channel, combined, reply_to=message, image_urls=image_urls)
 
     # Process commands
     await bot.process_commands(message)
