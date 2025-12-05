@@ -9,7 +9,6 @@ from google import genai
 import constants
 from classes import llm_tools
 
-
 # Lazy-initialized client
 _client = None
 
