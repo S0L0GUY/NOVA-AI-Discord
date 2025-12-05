@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 import ai
-import config
+import constants
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -90,7 +90,7 @@ async def collect_channel_history(channel, before_message=None, limit=None) -> s
     - Respects `config.MAX_HISTORY_MESSAGES` and `config.HISTORY_MAX_CHARS`.
     """
     if limit is None:
-        limit = config.MAX_HISTORY_MESSAGES
+        limit = constants.LLMConfig.MAX_HISTORY_MESSAGES
 
     messages = []
     # Fetch messages oldest-first so the conversation reads naturally
@@ -106,9 +106,8 @@ async def collect_channel_history(channel, before_message=None, limit=None) -> s
     total_chars = 0
     for m in messages:
         content = (m.clean_content or "").strip()
-        if config.INCLUDE_ATTACHMENTS and m.attachments:
-            for a in m.attachments:
-                content += f" [attachment: {a.url}]"
+        for a in m.attachments:
+            content += f" [attachment: {a.url}]"
 
         if not content:
             continue
@@ -121,7 +120,7 @@ async def collect_channel_history(channel, before_message=None, limit=None) -> s
         total_chars += len(line) + 1
 
     # Trim oldest lines until within HISTORY_MAX_CHARS
-    while lines and total_chars > config.HISTORY_MAX_CHARS:
+    while lines and total_chars > constants.LLMConfig.HISTORY_MAX_CHARS:
         removed = lines.pop(0)
         total_chars -= len(removed) + 1
 
@@ -172,24 +171,8 @@ async def on_message(message):
 @bot.command(name="help_nova")
 async def help_nova(ctx):
     """Display help information."""
-    help_text = (
-        "**NOVA-AI Discord Bot Help**\n\n"
-        "**Ways to interact with me:**\n"
-        "1. Mention me (@NOVA-AI) followed by your question\n"
-        "2. Use the `!ask` command followed by your question\n\n"
-        "**How NOVA mentions people in replies:**\n"
-        "- Include the token `@user` in your question and NOVA will replace\n"
-        "  it with the person who asked the question.\n"
-        "- If NOVA outputs something like `@Alice`, she will try to resolve\n"
-        "  `Alice` to a server member and convert it to a proper mention\n"
-        "  (e.g. `<@1234567890>`). Use full usernames or display names when\n"
-        "  possible to improve matching.\n\n"
-        "**Examples:**\n"
-        "- @NOVA-AI @user tell me a joke\n"
-        "- !ask @Bob what's your favorite color\n\n"
-        "**Note:** You can DM NOVA directly or mention her in server channels.\n"
-        "She will look up server members when resolving names for mentions.\n"
-    )
+    with open(constants.FilePaths.HELP_PROMPT_FILE, "r", encoding="utf-8") as f:
+        help_text = f.read()
     await ctx.send(help_text)
 
 

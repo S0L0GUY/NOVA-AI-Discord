@@ -3,8 +3,8 @@
 # Discord library
 discord.py>=2.3.2
 
-# GenAI model interaction
-google-generativeai>=0.2.3
+# GenAI model interaction (new Google GenAI SDK)
+google-genai>=0.1.0
 
 # Environment variable management
 python-dotenv>=1.0.0
