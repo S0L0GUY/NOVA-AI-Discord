@@ -20,6 +20,16 @@ class LLMConfig:
     # Keeps prompts from growing unbounded. Override with HISTORY_MAX_CHARS.
     HISTORY_MAX_CHARS = int(os.getenv("HISTORY_MAX_CHARS", "3000"))
 
+    # Image recognition and processing settings
+    # Whether to enable image analysis when images are shared
+    ENABLE_IMAGE_ANALYSIS = os.getenv("ENABLE_IMAGE_ANALYSIS", "true").lower() == "true"
+
+    # Maximum number of images to process per message
+    MAX_IMAGES_PER_MESSAGE = "5"
+
+    # Supported image formats
+    SUPPORTED_IMAGE_FORMATS = (".png", ".jpg", ".jpeg", ".gif", ".webp")
+
 
 class FilePaths:
     SYSTEM_PROMPT_FILE = os.path.join(
