@@ -28,7 +28,7 @@ class LLMConfig:
     MAX_IMAGES_PER_MESSAGE = "5"
 
     # Supported image formats
-    SUPPORTED_IMAGE_FORMATS = ('.png', '.jpg', '.jpeg', '.gif', '.webp')
+    SUPPORTED_IMAGE_FORMATS = (".png", ".jpg", ".jpeg", ".gif", ".webp")
 
 
 class FilePaths:

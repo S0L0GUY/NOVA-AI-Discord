@@ -38,6 +38,7 @@ def _download_image_from_url(image_url: str) -> Optional[bytes]:
     """
     try:
         import requests
+
         response = requests.get(image_url, timeout=10)
         response.raise_for_status()
         return response.content
@@ -76,18 +77,17 @@ def _build_multimodal_content(text_content: str, image_urls: list) -> list:
                 mime_type = "image/webp"
 
             try:
-                parts.append(types.Part.from_bytes(
-                    data=image_data,
-                    mime_type=mime_type
-                ))
+                parts.append(
+                    types.Part.from_bytes(data=image_data, mime_type=mime_type)
+                )
             except Exception as e:
                 print(f"Error processing image {image_url}: {e}")
 
     # If no text was provided, add a default prompt
     if not parts:
-        parts.append(types.Part.from_text(
-            text="Analyze and describe these image(s) in detail."
-        ))
+        parts.append(
+            types.Part.from_text(text="Analyze and describe these image(s) in detail.")
+        )
 
     return parts
 

@@ -160,7 +160,9 @@ async def on_message(message):
         if message.attachments:
             for attachment in message.attachments:
                 # Check if attachment is an image
-                if attachment.content_type and attachment.content_type.startswith('image/'):
+                if attachment.content_type and attachment.content_type.startswith(
+                    "image/"
+                ):
                     image_urls.append(attachment.url)
                     # Add attachment info to content if no text was provided
                     if not content:
@@ -174,7 +176,9 @@ async def on_message(message):
             combined = f"User: {content}"
 
         async with message.channel.typing():
-            await send_ai_response(message.channel, combined, reply_to=message, image_urls=image_urls)
+            await send_ai_response(
+                message.channel, combined, reply_to=message, image_urls=image_urls
+            )
 
     # Process commands
     await bot.process_commands(message)
