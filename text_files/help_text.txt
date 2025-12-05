@@ -1,0 +1,18 @@
+**NOVA-AI Discord Bot Help**
+**Ways to interact with me:**
+1. Mention me (@NOVA-AI) followed by your question
+2. Use the `!ask` command followed by your question
+**How NOVA mentions people in replies:**
+- Include the token `@user` in your question and NOVA will replace
+    it with the person who asked the question.
+- If NOVA outputs something like `@Alice`, she will try to resolve
+    `Alice` to a server member and convert it to a proper mention
+    (e.g. `<@1234567890>`). Use full usernames or display names when
+    possible to improve matching.
+**Examples:**
+- @NOVA-AI @user tell me a joke
+- !ask @Bob what's your favorite color
+
+
+**Note:** You can DM NOVA directly or mention her in server channels.
+She will look up server members when resolving names for mentions.
