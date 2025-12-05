@@ -1,4 +1,5 @@
 import os
+
 import dotenv
 
 dotenv.load_dotenv()
@@ -21,8 +22,12 @@ class LLMConfig:
 
 
 class FilePaths:
-    SYSTEM_PROMPT_FILE = os.path.join(os.path.dirname(__file__), "text_files/prompt.txt")
-    HELP_PROMPT_FILE = os.path.join(os.path.dirname(__file__), "text_files/help_text.txt")
+    SYSTEM_PROMPT_FILE = os.path.join(
+        os.path.dirname(__file__), "text_files/prompt.txt"
+    )
+    HELP_PROMPT_FILE = os.path.join(
+        os.path.dirname(__file__), "text_files/help_text.txt"
+    )
 
 
 class Secrets:

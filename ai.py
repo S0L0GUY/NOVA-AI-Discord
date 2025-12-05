@@ -6,8 +6,8 @@ a simple generate_response() function returning plain text.
 
 from google import genai
 
-from classes import llm_tools
 import constants
+from classes import llm_tools
 
 
 # Lazy-initialized client
@@ -37,7 +37,7 @@ def generate_response(user_content: str) -> str:
     gen_config = llm_tools.get_generate_config()
 
     # Set the system instruction in the config
-    with open(constants.FilePaths.SYSTEM_PROMPT_FILE, 'r', encoding='utf-8') as f:
+    with open(constants.FilePaths.SYSTEM_PROMPT_FILE, "r", encoding="utf-8") as f:
         gen_config.system_instruction = f.read()
 
     # Generate content using proper message handling
