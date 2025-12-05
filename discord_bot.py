@@ -132,6 +132,26 @@ async def collect_channel_history(channel, before_message=None, limit=None) -> s
 async def on_ready():
     print(f"{bot.user} has connected to Discord!")
     print(f"Connected to {len(bot.guilds)} guild(s)")
+    if not getattr(bot, "tree_synced", False):
+        await bot.tree.sync()
+        # Also sync per-guild so slash commands appear immediately
+        for guild in bot.guilds:
+            try:
+                await bot.tree.sync(guild=guild)
+                print(f"Synced commands for guild {guild.name} ({guild.id})")
+            except Exception as e:
+                print(f"Failed to sync commands for guild {guild.id}: {e}")
+        bot.tree_synced = True  # type: ignore[attr-defined]
+        print("Synced application commands.")
+
+
+@bot.event
+async def on_guild_join(guild):
+    try:
+        await bot.tree.sync(guild=guild)
+        print(f"Synced commands for new guild {guild.name} ({guild.id})")
+    except Exception as e:
+        print(f"Failed to sync commands for guild {guild.id}: {e}")
 
 
 @bot.event
@@ -155,6 +175,17 @@ async def on_message(message):
             )
             return
 
+        # Extract image URLs from attachments
+        image_urls = []
+        if message.attachments:
+            for attachment in message.attachments:
+                # Check if attachment is an image
+                if attachment.content_type and attachment.content_type.startswith('image/'):
+                    image_urls.append(attachment.url)
+                    # Add attachment info to content if no text was provided
+                    if not content:
+                        content = "Analyze this image"
+
         # Build recent channel history and show typing indicator
         history = await collect_channel_history(message.channel, before_message=message)
         if history:
@@ -163,14 +194,14 @@ async def on_message(message):
             combined = f"User: {content}"
 
         async with message.channel.typing():
-            await send_ai_response(message.channel, combined, reply_to=message)
+            await send_ai_response(message.channel, combined, reply_to=message, image_urls=image_urls)
 
     # Process commands
     await bot.process_commands(message)
 
 
-@bot.command(name="help_nova")
-async def help_nova(ctx):
+@bot.hybrid_command(name="help", description="Display help information.")
+async def help(ctx):
     """Display help information."""
     help_text = (
         "**NOVA-AI Discord Bot Help**\n\n"
