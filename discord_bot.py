@@ -204,8 +204,8 @@ async def on_message(message):
     await bot.process_commands(message)
 
 
-@bot.hybrid_command(name="help", description="Display help information.")
-async def help(ctx):
+@bot.hybrid_command(name="help_nova", description="Display help information.")
+async def help_nova(ctx):
     """Display help information."""
     with open(constants.FilePaths.HELP_PROMPT_FILE, "r", encoding="utf-8") as f:
         help_text = f.read()
