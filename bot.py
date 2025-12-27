@@ -31,13 +31,13 @@ class _HealthHandler(BaseHTTPRequestHandler):
         return
 
 
-def _start_health_server(port: int) -> None:
+def _start_health_server(server_port: int) -> None:
     try:
-        server = HTTPServer(("", port), _HealthHandler)
-        print(f"Health server listening on port {port}")
+        server = HTTPServer(("", server_port), _HealthHandler)
+        print(f"Health server listening on port {server_port}")
         server.serve_forever()
     except Exception as e:
-        print(f"Health server failed to start on port {port}: {e}")
+        print(f"Health server failed to start on port {server_port}: {e}")
 
 
 if __name__ == "__main__":

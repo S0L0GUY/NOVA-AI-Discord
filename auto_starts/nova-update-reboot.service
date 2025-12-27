@@ -1,0 +1,12 @@
+[Unit]
+Description=Update NOVA-AI-Discord on reboot
+After=network-online.target
+
+[Service]
+User=YOURUSER
+WorkingDirectory=/home/YOURUSER/NOVA-AI-Discord
+ExecStart=/home/YOURUSER/NOVA-AI-Discord/auto_update.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
