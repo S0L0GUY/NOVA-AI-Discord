@@ -19,5 +19,6 @@ do
     sudo reboot
   fi
 
-  sleep 1667
+  # Check for updates every 30 minutes
+  sleep 1800
 done
