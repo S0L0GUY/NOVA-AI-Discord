@@ -14,7 +14,8 @@ do
   REMOTE=$(git rev-parse origin/main)
 
   if [ "$LOCAL" != "$REMOTE" ]; then
-    echo "$(date): Update detected, rebooting Pi..."
+    echo "$(date): Update detected, pulling latest changes and rebooting Pi..."
+    git pull origin main || { echo "$(date): Git pull failed, skipping reboot."; sleep 60; continue; }
     sudo reboot
   fi
 
