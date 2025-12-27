@@ -32,7 +32,7 @@ chmod +x auto_update.sh
 sudo nano /etc/systemd/system/nova-update-reboot.service
 ```
 
-* Add your service configuration, this can be found in the `auto_updates` folder
+* Add your service configuration, this can be found in the `auto_starts` folder
 
 * Save and exit.
 
