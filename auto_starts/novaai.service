@@ -1,0 +1,14 @@
+[Unit]
+Description=NOVA AI Discord Bot
+After=network.target
+
+[Service]
+User=world
+WorkingDirectory=/home/world/NOVA-AI-Discord
+ExecStart=/home/world/NOVA-AI-Discord/venv/bin/python /home/world/NOVA-AI-Discord/bot.py
+Restart=always
+RestartSec=5
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target
