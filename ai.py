@@ -1,30 +1,20 @@
-"""Thin wrapper around the generative AI model.
+"""Adapter that runs the Gemini Live API for single-turn responses.
 
-This module initializes the Google GenAI client and exposes
-generate_response() function returning plain text. Supports both
-text and multimodal (image) content through the Gemini API.
+This module wraps `classes.gemini_live.GeminiLive` to provide a
+sync-friendly `generate_response()` function used by the bot. It sends
+the user's text (and optional images as video frames) into a Live
+session and collects model-produced text events until the turn
+completes.
 """
 
 from typing import Optional
-
-from google import genai
-from google.genai import types
+import asyncio
+import re
 
 import constants
 from classes import llm_tools
-
-# Lazy-initialized client
-_client = None
-
-
-def _init_client():
-    """Initialize the GenAI client."""
-    global _client
-    if _client is None:
-        if not constants.Secrets.GENAI_API_KEY:
-            raise RuntimeError("GENAI_API_KEY not set in environment")
-        _client = genai.Client(api_key=constants.Secrets.GENAI_API_KEY)
-    return _client
+from classes.gemini_live import GeminiLive
+from google.genai import types
 
 
 def _download_image_from_url(image_url: str) -> Optional[bytes]:
@@ -92,44 +82,75 @@ def _build_multimodal_content(text_content: str, image_urls: list) -> list:
     return parts
 
 
-def generate_response(user_content: str, image_urls: Optional[list] = None) -> str:
-    """Generate a text response for the given user content.
+async def generate_response(user_content: str, image_urls: Optional[list] = None) -> str:
+    """Generate a text response using Gemini Live.
 
-    Supports both text-only and multimodal (text + images) responses.
-    The system prompt from `config.SYSTEM_PROMPT` is used as a system instruction,
-    and the user's content is passed as the user message. This follows best practices
-    for structured prompt handling with the Gemini API.
-
-    Args:
-        user_content: Text content from the user
-        image_urls: Optional list of image URLs to analyze
-
-    Returns:
-        Response text from the AI model
+    This is a synchronous wrapper that starts a short-lived Live session,
+    sends the user's text (and any images as video frames), and collects
+    text output events until the model finishes the turn.
     """
-    client = _init_client()
 
-    # Get the generation config with tools
-    gen_config = llm_tools.get_generate_config()
+    if not constants.Secrets.GENAI_API_KEY:
+        raise RuntimeError("GENAI_API_KEY not set in environment")
 
-    # Set the system instruction in the config
+    # Load system prompt
     with open(constants.FilePaths.SYSTEM_PROMPT_FILE, "r", encoding="utf-8") as f:
-        gen_config.system_instruction = f.read()
+        system_instruction = f.read()
 
-    # Build content with images if provided
-    if image_urls and len(image_urls) > 0:
-        contents = _build_multimodal_content(user_content, image_urls)
-    else:
-        contents = user_content
+    tools = llm_tools.get_tools()
+    tool_mapping = llm_tools.get_tool_mapping()
 
-    # Generate content using proper message handling
-    response = client.models.generate_content(
+    live = GeminiLive(
+        api_key=constants.Secrets.GENAI_API_KEY,
         model=constants.LLMConfig.MODEL_NAME,
-        contents=contents,
-        config=gen_config,
+        input_sample_rate=16000,
+        system_instruction=system_instruction,
+        tools=tools,
+        tool_mapping=tool_mapping,
     )
 
-    text = getattr(response, "text", None)
-    if not text:
-        return "Error: No response text received from the AI model."
-    return text
+    async def _run_live() -> str:
+        audio_q = asyncio.Queue()
+        video_q = asyncio.Queue()
+        text_q = asyncio.Queue()
+
+        # If images were provided, send them as video frames
+        if image_urls:
+            for url in image_urls:
+                data = _download_image_from_url(url)
+                if data:
+                    await video_q.put(data)
+
+        # Put the user's message into the text queue
+        await text_q.put(user_content)
+
+        collected = []
+
+        try:
+            # Stream events from Gemini Live; stop when turn_complete is seen
+            async for event in live.start_session(
+                audio_q, video_q, text_q, None, None
+            ):
+                if event is None:
+                    break
+                if isinstance(event, dict):
+                    t = event.get("type")
+                    if t == "gemini" and event.get("text"):
+                        collected.append(event.get("text"))
+                    if t == "turn_complete":
+                        break
+                    if t == "error":
+                        collected.append(f"Error from Live API: {event.get('error')}")
+                        break
+        except asyncio.TimeoutError:
+            collected.append("Error: timed out waiting for Gemini Live response")
+
+        raw = " ".join(collected).strip()
+        # Collapse any whitespace (newlines, multiple spaces, tabs) to single spaces
+        cleaned = re.sub(r"\s+", " ", raw)
+        # Remove space before common punctuation
+        cleaned = re.sub(r"\s+([,?.!;:])", r"\1", cleaned)
+        return cleaned
+
+    # Run the async Live session and return the result
+    return await _run_live()

@@ -51,3 +51,24 @@ def get_generate_config(disable_automatic: bool = False) -> types.GenerateConten
         )
 
     return config
+
+
+def get_tools() -> list:
+    """Return a list of callable tools suitable for LiveConnect `tools`.
+
+    The Gemini Live client accepts the same callable tools as the
+    standard GenerateContentConfig. Return a simple list here so callers
+    (like `ai.py`) can pass them into `GeminiLive`.
+    """
+
+    return [get_time]
+
+
+def get_tool_mapping() -> dict:
+    """Return a mapping of tool name to callable used by GeminiLive.
+
+    GeminiLive expects a mapping from function name to the callable so it
+    can execute function calls received from the model.
+    """
+
+    return {fn.__name__: fn for fn in get_tools()}

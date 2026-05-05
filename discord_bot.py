@@ -24,7 +24,7 @@ async def send_ai_response(target, content: str, reply_to=None, image_urls=None)
       placeholders), it will be replaced with the mention for `reply_to.author`.
     """
     try:
-        response_text = ai.generate_response(content, image_urls=image_urls)
+        response_text = await ai.generate_response(content, image_urls=image_urls)
 
         # If replying to a message, allow the model to include a placeholder
         # like '@user' which we'll replace with the proper mention syntax.

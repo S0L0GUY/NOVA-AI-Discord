@@ -6,7 +6,7 @@ dotenv.load_dotenv()
 
 
 class LLMConfig:
-    MODEL_NAME = "gemini-2.5-flash"
+    MODEL_NAME = "gemini-3.1-flash-live-preview"
     TEMPERATURE = 0.7
 
     # How many prior messages to fetch from the channel when building
