@@ -56,7 +56,7 @@ class GeminiLive:
         self.api_key = api_key
         self.model = model
         self.input_sample_rate = input_sample_rate
-        self.system_instruction = system_instruction or DEFAULT_SYSTEM_PROMPT
+        self.system_instruction = system_instruction
         self.voice_name = voice_name or "Puck"
         self.client = genai.Client(api_key=api_key)
         self.tools = tools or []
