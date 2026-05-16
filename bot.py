@@ -42,7 +42,9 @@ def _start_health_server(server_port: int) -> None:
         logger.info(f"✓ Health server listening on port {server_port}")
         server.serve_forever()
     except OSError as e:
-        logger.error(f"Failed to start health server on port {server_port}: {e}", exc_info=True)
+        logger.error(
+            f"Failed to start health server on port {server_port}: {e}", exc_info=True
+        )
     except Exception as e:
         logger.error(f"Unexpected error in health server: {e}", exc_info=True)
 
@@ -52,7 +54,7 @@ if __name__ == "__main__":
         logger.info("=" * 60)
         logger.info("NOVA Discord Bot Starting")
         logger.info("=" * 60)
-        
+
         # Validate required environment variables
         token = constants.Secrets.DISCORD_TOKEN
         if not token:
@@ -81,13 +83,15 @@ if __name__ == "__main__":
             logger.warning(f"Invalid port configuration, using default: {port}")
 
         logger.info(f"Starting health server thread on port {port}")
-        thread = threading.Thread(target=_start_health_server, args=(port,), daemon=True)
+        thread = threading.Thread(
+            target=_start_health_server, args=(port,), daemon=True
+        )
         thread.start()
         logger.debug("Health server thread started")
 
         logger.info("Starting Discord bot...")
         bot.run(token)
-        
+
     except KeyboardInterrupt:
         logger.info("Bot interrupted by user")
         sys.exit(0)

@@ -22,21 +22,25 @@ logger = get_logger(__name__)
 
 class APIError(Exception):
     """Base exception for API-related errors."""
+
     pass
 
 
 class ConfigError(APIError):
     """Configuration or setup error."""
+
     pass
 
 
 class NetworkError(APIError):
     """Network or download error."""
+
     pass
 
 
 class ProcessingError(APIError):
     """Error during processing of response or images."""
+
     pass
 
 
@@ -48,7 +52,7 @@ def _download_image_from_url(image_url: str) -> Optional[bytes]:
 
     Returns:
         Image bytes if successful, None otherwise
-        
+
     Raises:
         NetworkError: If download fails after retries
     """
@@ -58,10 +62,10 @@ def _download_image_from_url(image_url: str) -> Optional[bytes]:
         logger.debug(f"Downloading image from URL: {image_url}")
         response = requests.get(image_url, timeout=10)
         response.raise_for_status()
-        
+
         logger.debug(f"Successfully downloaded image: {len(response.content)} bytes")
         return response.content
-        
+
     except requests.exceptions.Timeout:
         logger.warning(f"Timeout downloading image from {image_url}")
         return None
@@ -72,7 +76,9 @@ def _download_image_from_url(image_url: str) -> Optional[bytes]:
         logger.warning(f"HTTP error downloading image from {image_url}: {e}")
         return None
     except Exception as e:
-        logger.error(f"Unexpected error downloading image from {image_url}: {e}", exc_info=True)
+        logger.error(
+            f"Unexpected error downloading image from {image_url}: {e}", exc_info=True
+        )
         return None
 
 
@@ -85,7 +91,7 @@ def _build_multimodal_content(text_content: str, image_urls: list) -> list:
 
     Returns:
         A list of content parts suitable for the Gemini API
-        
+
     Raises:
         ProcessingError: If content building fails
     """
@@ -116,7 +122,9 @@ def _build_multimodal_content(text_content: str, image_urls: list) -> list:
                         parts.append(
                             types.Part.from_bytes(data=image_data, mime_type=mime_type)
                         )
-                        logger.debug(f"Added image part ({mime_type}): {len(image_data)} bytes")
+                        logger.debug(
+                            f"Added image part ({mime_type}): {len(image_data)} bytes"
+                        )
                 except Exception as e:
                     logger.warning(f"Error processing image {image_url}: {e}")
 
@@ -124,7 +132,9 @@ def _build_multimodal_content(text_content: str, image_urls: list) -> list:
         if not parts:
             logger.debug("No content provided, using default image analysis prompt")
             parts.append(
-                types.Part.from_text(text="Analyze and describe these image(s) in detail.")
+                types.Part.from_text(
+                    text="Analyze and describe these image(s) in detail."
+                )
             )
 
         logger.debug(f"Built multimodal content with {len(parts)} parts")
@@ -134,35 +144,41 @@ def _build_multimodal_content(text_content: str, image_urls: list) -> list:
         raise ProcessingError(f"Failed to build multimodal content: {e}")
 
 
-async def generate_response(user_content: str, image_urls: Optional[list] = None) -> str:
+async def generate_response(
+    user_content: str, image_urls: Optional[list] = None
+) -> str:
     """Generate a text response using Gemini Live.
 
     This is a synchronous wrapper that starts a short-lived Live session,
     sends the user's text (and any images as video frames), and collects
     text output events until the model finishes the turn.
-    
+
     Args:
         user_content: The user's text message
         image_urls: Optional list of image URLs to include
-        
+
     Returns:
         Generated response text from the model
-        
+
     Raises:
         ConfigError: If configuration is missing or invalid
         ProcessingError: If processing fails
     """
     try:
         logger.debug(f"Generating response for content: {user_content[:100]}...")
-        
+
         if not constants.Secrets.GENAI_API_KEY:
             logger.error("GENAI_API_KEY not set in environment")
             raise ConfigError("GENAI_API_KEY not set in environment")
 
         # Load system prompt
         try:
-            logger.debug(f"Loading system prompt from {constants.FilePaths.SYSTEM_PROMPT_FILE}")
-            with open(constants.FilePaths.SYSTEM_PROMPT_FILE, "r", encoding="utf-8") as f:
+            logger.debug(
+                f"Loading system prompt from {constants.FilePaths.SYSTEM_PROMPT_FILE}"
+            )
+            with open(
+                constants.FilePaths.SYSTEM_PROMPT_FILE, "r", encoding="utf-8"
+            ) as f:
                 system_instruction = f.read()
             logger.debug(f"Loaded system prompt: {len(system_instruction)} characters")
         except FileNotFoundError as e:
@@ -178,7 +194,9 @@ async def generate_response(user_content: str, image_urls: Optional[list] = None
             raise ProcessingError(f"Failed to load tools: {e}")
 
         try:
-            logger.debug(f"Initializing GeminiLive with model: {constants.LLMConfig.MODEL_NAME}")
+            logger.debug(
+                f"Initializing GeminiLive with model: {constants.LLMConfig.MODEL_NAME}"
+            )
             live = GeminiLive(
                 api_key=constants.Secrets.GENAI_API_KEY,
                 model=constants.LLMConfig.MODEL_NAME,
@@ -230,11 +248,13 @@ async def generate_response(user_content: str, image_urls: Optional[list] = None
                         if isinstance(event, dict):
                             t = event.get("type")
                             logger.debug(f"Received event type: {t}")
-                            
+
                             if t == "gemini" and event.get("text"):
                                 text = event.get("text")
                                 collected.append(text)
-                                logger.debug(f"Collected gemini text: {len(text)} chars")
+                                logger.debug(
+                                    f"Collected gemini text: {len(text)} chars"
+                                )
                             elif t == "turn_complete":
                                 logger.debug("Turn complete")
                                 break
@@ -243,12 +263,16 @@ async def generate_response(user_content: str, image_urls: Optional[list] = None
                                 logger.error(f"Error from Live API: {error_msg}")
                                 collected.append(f"Error from Live API: {error_msg}")
                                 break
-                    
-                    logger.debug(f"Received {event_count} events, collected {len(collected)} text parts")
-                    
+
+                    logger.debug(
+                        f"Received {event_count} events, collected {len(collected)} text parts"
+                    )
+
                 except asyncio.TimeoutError:
                     logger.error("Timeout waiting for Gemini Live response")
-                    collected.append("Error: timed out waiting for Gemini Live response")
+                    collected.append(
+                        "Error: timed out waiting for Gemini Live response"
+                    )
                 except Exception as e:
                     logger.error(f"Error in Live session: {e}", exc_info=True)
                     raise ProcessingError(f"Error during AI session: {e}")
@@ -258,8 +282,10 @@ async def generate_response(user_content: str, image_urls: Optional[list] = None
                 cleaned = re.sub(r"\s+", " ", raw)
                 # Remove space before common punctuation
                 cleaned = re.sub(r"\s+([,?.!;:])", r"\1", cleaned)
-                
-                logger.debug(f"Final response: {cleaned[:100]}... ({len(cleaned)} chars)")
+
+                logger.debug(
+                    f"Final response: {cleaned[:100]}... ({len(cleaned)} chars)"
+                )
                 return cleaned
 
             except ProcessingError:
@@ -272,7 +298,7 @@ async def generate_response(user_content: str, image_urls: Optional[list] = None
         response = await _run_live()
         logger.info("Response generated successfully")
         return response
-        
+
     except (ConfigError, ProcessingError):
         raise
     except Exception as e:

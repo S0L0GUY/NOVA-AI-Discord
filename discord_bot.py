@@ -69,16 +69,24 @@ async def send_ai_response(target, content: str, reply_to=None, image_urls=None)
                         await target.send(chunk)
                     else:
                         await target.send(chunk)
-                logger.debug(f"Successfully sent message chunk of {len(chunk)} characters")
+                logger.debug(
+                    f"Successfully sent message chunk of {len(chunk)} characters"
+                )
             except discord.errors.HTTPException as e:
-                logger.error(f"Discord HTTP error while sending message: {e}", exc_info=True)
+                logger.error(
+                    f"Discord HTTP error while sending message: {e}", exc_info=True
+                )
                 raise
             except Exception as e:
-                logger.error(f"Unexpected error while sending message: {e}", exc_info=True)
+                logger.error(
+                    f"Unexpected error while sending message: {e}", exc_info=True
+                )
                 raise
 
         if len(response_text) > 2000:
-            logger.info(f"Splitting large response ({len(response_text)} chars) into chunks")
+            logger.info(
+                f"Splitting large response ({len(response_text)} chars) into chunks"
+            )
             for i in range(0, len(response_text), 2000):
                 await _send(response_text[i : i + 2000])
         else:
@@ -86,7 +94,9 @@ async def send_ai_response(target, content: str, reply_to=None, image_urls=None)
         logger.info("AI response sent successfully")
     except ai.APIError as e:
         logger.error(f"AI API error: {e}", exc_info=True)
-        err_msg = "Sorry, I encountered an error with the AI service. Please try again later."
+        err_msg = (
+            "Sorry, I encountered an error with the AI service. Please try again later."
+        )
         try:
             if reply_to:
                 await reply_to.reply(err_msg)
@@ -159,7 +169,9 @@ async def collect_channel_history(channel, before_message=None, limit=None) -> s
             total_chars -= len(removed) + 1
 
         history = "\n".join(lines)
-        logger.debug(f"Collected {len(messages)} messages, {len(lines)} lines, {total_chars} chars for history")
+        logger.debug(
+            f"Collected {len(messages)} messages, {len(lines)} lines, {total_chars} chars for history"
+        )
         return history
     except Exception as e:
         logger.error(f"Error collecting channel history: {e}", exc_info=True)
@@ -172,19 +184,23 @@ async def on_ready():
     try:
         logger.info(f"✓ Bot connected to Discord - User: {bot.user}")
         logger.info(f"✓ Connected to {len(bot.guilds)} guild(s)")
-        
+
         if not getattr(bot, "tree_synced", False):
             logger.info("Syncing application commands...")
             await bot.tree.sync()
-            
+
             # Also sync per-guild so slash commands appear immediately
             for guild in bot.guilds:
                 try:
                     await bot.tree.sync(guild=guild)
-                    logger.debug(f"Synced commands for guild: {guild.name} ({guild.id})")
+                    logger.debug(
+                        f"Synced commands for guild: {guild.name} ({guild.id})"
+                    )
                 except Exception as e:
-                    logger.warning(f"Failed to sync commands for guild {guild.id} ({guild.name}): {e}")
-            
+                    logger.warning(
+                        f"Failed to sync commands for guild {guild.id} ({guild.name}): {e}"
+                    )
+
             bot.tree_synced = True  # type: ignore[attr-defined]
             logger.info("✓ Application commands synced successfully")
     except Exception as e:
@@ -199,7 +215,10 @@ async def on_guild_join(guild):
         await bot.tree.sync(guild=guild)
         logger.info(f"✓ Synced commands for new guild: {guild.name}")
     except Exception as e:
-        logger.error(f"Failed to sync commands for guild {guild.id} ({guild.name}): {e}", exc_info=True)
+        logger.error(
+            f"Failed to sync commands for guild {guild.id} ({guild.name}): {e}",
+            exc_info=True,
+        )
 
 
 @bot.event
@@ -212,8 +231,10 @@ async def on_message(message):
 
         # Only respond to messages that mention the bot
         if bot.user and bot.user.mentioned_in(message):
-            logger.debug(f"Bot mentioned in message from {message.author} ({message.author.id}) in {message.guild.name if message.guild else 'DM'}")
-            
+            logger.debug(
+                f"Bot mentioned in message from {message.author} ({message.author.id}) in {message.guild.name if message.guild else 'DM'}"
+            )
+
             # Remove the bot mention from the message (handle both <@id> and <@!id>)
             content = (
                 message.content.replace(f"<@{bot.user.id}>", "")
@@ -235,8 +256,9 @@ async def on_message(message):
                 for attachment in message.attachments:
                     try:
                         # Check if attachment is an image
-                        if attachment.content_type and attachment.content_type.startswith(
-                            "image/"
+                        if (
+                            attachment.content_type
+                            and attachment.content_type.startswith("image/")
                         ):
                             image_urls.append(attachment.url)
                             logger.debug(f"Added image attachment: {attachment.url}")
@@ -248,7 +270,9 @@ async def on_message(message):
 
             # Build recent channel history and show typing indicator
             logger.debug(f"Building channel history for {message.channel}")
-            history = await collect_channel_history(message.channel, before_message=message)
+            history = await collect_channel_history(
+                message.channel, before_message=message
+            )
             if history:
                 combined = f"{history}\nUser: {content}"
             else:
@@ -294,7 +318,7 @@ async def members(ctx):
     """
     try:
         logger.debug(f"Members command invoked by {ctx.author} in {ctx.guild}")
-        
+
         if ctx.guild is None:
             logger.warning(f"Members command attempted in DM by {ctx.author}")
             await ctx.send("This command works only in servers (not in DMs).")
@@ -314,7 +338,9 @@ async def members(ctx):
         header = f"Server members ({len(lines)}):\n"
         text = header + "\n".join(lines)
 
-        logger.info(f"Sending members list ({len(user_members)} members) to {ctx.author}")
+        logger.info(
+            f"Sending members list ({len(user_members)} members) to {ctx.author}"
+        )
         # Split into Discord-friendly chunks
         for i in range(0, len(text), 2000):
             await ctx.send(text[i : i + 2000])
