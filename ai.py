@@ -7,14 +7,15 @@ session and collects model-produced text events until the turn
 completes.
 """
 
-from typing import Optional
 import asyncio
 import re
+from typing import Optional
+
+from google.genai import types
 
 import constants
 from classes import llm_tools
 from classes.gemini_live import GeminiLive
-from google.genai import types
 from logger import get_logger
 
 logger = get_logger(__name__)

@@ -7,7 +7,6 @@ file and console handlers, and automatic log rotation to prevent disk space issu
 import logging
 import os
 from logging.handlers import RotatingFileHandler
-from datetime import datetime
 
 
 def setup_logger(name: str = "nova_bot", log_level: str = "INFO") -> logging.Logger:
