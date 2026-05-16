@@ -61,3 +61,4 @@ sudo systemctl status nova-update-reboot
 ```
 
 * You should see it active/running.
+Tests.
