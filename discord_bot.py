@@ -1,4 +1,4 @@
-import re
+code aimport re
 
 import discord
 from discord.ext import commands

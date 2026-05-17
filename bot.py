@@ -12,6 +12,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import constants
+from config import ConfigValidationError, validate_all
 from discord_bot import bot
 from logger import get_logger
 
@@ -55,27 +56,16 @@ if __name__ == "__main__":
         logger.info("NOVA Discord Bot Starting")
         logger.info("=" * 60)
 
-        # Validate required environment variables
-        token = constants.Secrets.DISCORD_TOKEN
-        if not token:
-            logger.error("Error: DISCORD_TOKEN not found in environment variables!")
-            logger.error("Please create a .env file with your Discord token.")
-            print("Error: DISCORD_TOKEN not found in environment variables!")
-            print("Please create a .env file with your Discord token.")
-            sys.exit(1)
-        logger.info("✓ Discord token configured")
+        # Validate all configuration before doing anything else.
+        # Exits with code 1 and a setup guide if anything is wrong.
+        try:
+            validate_all()
+        except ConfigValidationError:
+            # ConfigValidationError inherits SystemExit; re-raise to let the
+            # process terminate cleanly with the correct exit code.
+            raise
 
-        if not constants.Secrets.GENAI_API_KEY:
-            logger.error("Error: GENAI_API_KEY not found in environment variables!")
-            logger.error("Please create a .env file with your GenAI API key.")
-            print("Error: GENAI_API_KEY not found in environment variables!")
-            print("Please create a .env file with your GenAI API key.")
-            sys.exit(1)
-        logger.info("✓ GenAI API key configured")
-
-        # Start a small background HTTP server so the process binds a port.
-        # Platform health checks will use `PORT` (common) or `WEB_PORT`,
-        # defaulting to 8080 if neither is provided.
+        # Determine health-server port (validated above, so safe to parse).
         try:
             port = int(os.getenv("PORT", os.getenv("WEB_PORT", "8080")))
         except ValueError:
@@ -90,8 +80,10 @@ if __name__ == "__main__":
         logger.debug("Health server thread started")
 
         logger.info("Starting Discord bot...")
-        bot.run(token)
+        bot.run(constants.Secrets.DISCORD_TOKEN)
 
+    except (SystemExit, ConfigValidationError):
+        raise
     except KeyboardInterrupt:
         logger.info("Bot interrupted by user")
         sys.exit(0)
